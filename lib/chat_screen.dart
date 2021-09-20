@@ -53,8 +53,51 @@ class _ChatScreenState extends State<ChatScreen>{
       ),
 
       //corpo da tela de chat
-      //aqui vai pegar o TextComposer vai pegar a função de enviar a mensagem e enviar para o firebase
-      body: TextComposer(_sendMessage),
+
+      body: Column(
+        children: <Widget>[
+
+          //aqui vão aparecer os textos e imagens enviadas com o listview:
+          Expanded(
+            //retorna o conteúdo do chat em tempo real com o StreamBuilder
+            child: StreamBuilder<QuerySnapshot>(
+              stream: Firestore.instance.collection("messages").snapshots(),
+              builder: (context, snapshot) {
+                switch(snapshot.connectionState){
+                  //caso a conexão retorne nada:
+                  case ConnectionState.none:
+                    //caso esteja esperando:
+                  case ConnectionState.waiting:
+                    return Center(
+                      child: CircularProgressIndicator(),
+
+
+                    );
+                  default:
+                    List<DocumentSnapshot> documents = snapshot.data.documents;
+
+                    return ListView.builder(
+                      //quantos documetos foram recebidos em "messages"
+                      itemCount: documents.length,
+                      //para aparecer as mensagens de baixo para cima
+                      reverse: true,
+                      itemBuilder: (context, index){
+                        return ListTile(
+                          title: Text(documents[index].data["text"]),
+                        );
+                      },
+
+                    );
+                }
+              }
+            ),
+          ),
+
+          //aqui vai pegar o TextComposer vai pegar a função de enviar a mensagem/imagem  e enviar para o Firebase
+          TextComposer(_sendMessage),
+        ],
+      )
+
     );
   }
 }
