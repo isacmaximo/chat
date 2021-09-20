@@ -29,12 +29,18 @@ class _ChatScreenState extends State<ChatScreen>{
   //se não logar currentUser continua nulo
   FirebaseUser _currentUser;
 
+  //variável que irá indicar se está carregando a imagem ou não:
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
     //verificar se está logado
     FirebaseAuth.instance.onAuthStateChanged.listen((user) {
-      _currentUser = user;
+      setState(() {
+        _currentUser = user;
+      });
+
     });
 
   }
@@ -95,16 +101,31 @@ class _ChatScreenState extends State<ChatScreen>{
       "uid" : user.uid,
       "senderName" : user.displayName,
       "senderPhotoUrl" : user.photoUrl,
+      "time" : Timestamp.now(),
 
     };
 
     //enviando um arquivo para o Firebase storage:
     if(imgFile != null){
-      StorageUploadTask task = FirebaseStorage.instance.ref().child(DateTime.now().microsecondsSinceEpoch.toString()).putFile(imgFile);
+      StorageUploadTask task = FirebaseStorage.instance.ref().child(
+        //a imagem vai ser identificada pelo id do usuário junto com o tempo em microssegundo do momento
+          user.uid + DateTime.now().microsecondsSinceEpoch.toString()).putFile(imgFile);
+
+      //idica que a imagem está sendo carregada
+      setState(() {
+        _isLoading = true;
+      });
+
       //retorna as informações da task concluída:
       StorageTaskSnapshot taskSnapshot = await task.onComplete;
       String url= await taskSnapshot.ref.getDownloadURL();
       data["imgUrl"] = url;
+
+      //indica que a imagem carregou
+      setState(() {
+        _isLoading = false;
+      });
+
     }
 
     //enviando o texto (mensagem)  para o Firebase
@@ -126,8 +147,27 @@ class _ChatScreenState extends State<ChatScreen>{
       key: _scaffoldKey,
       //barra que fica no topo
       appBar: AppBar(
-        title: Text("Olá"),
+        title: Text(
+          //título do chat (se for diferente de nulo aparece o nome do usuário)
+          _currentUser != null ? "${_currentUser.displayName}" : "Chat App",
+        ),
+        centerTitle: true,
         elevation: 0,
+
+        //botão de logout e sua função:
+        actions: <Widget>[
+          _currentUser != null ? IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: (){
+              FirebaseAuth.instance.signOut();
+              googleSignIn.signOut();
+              //mensagem de saída:
+              _scaffoldKey.currentState.showSnackBar(SnackBar(content: Text("Você saiu com sucesso!"),));
+
+            }
+          ) : Container()
+        ],
+
       ),
 
       //corpo da tela de chat
@@ -139,7 +179,7 @@ class _ChatScreenState extends State<ChatScreen>{
           Expanded(
             //retorna o conteúdo do chat em tempo real com o StreamBuilder
             child: StreamBuilder<QuerySnapshot>(
-              stream: Firestore.instance.collection("messages").snapshots(),
+              stream: Firestore.instance.collection("messages").orderBy("time").snapshots(),
               builder: (context, snapshot) {
                 switch(snapshot.connectionState){
                   //caso a conexão retorne nada:
@@ -152,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen>{
 
                     );
                   default:
-                    List<DocumentSnapshot> documents = snapshot.data.documents.toList();
+                    List<DocumentSnapshot> documents = snapshot.data.documents.reversed.toList();
 
                     return ListView.builder(
                       //quantos documetos foram recebidos em "messages"
@@ -161,7 +201,9 @@ class _ChatScreenState extends State<ChatScreen>{
                       reverse: true,
                       itemBuilder: (context, index){
                         //retornar a data (mensagens, imagens e outras informações do chat)
-                        return ChatMessage(documents[index].data,  true);
+                        return ChatMessage(documents[index].data,
+                        documents[index].data["uid"] == _currentUser?.uid
+                        );
                       },
 
                     );
@@ -169,6 +211,9 @@ class _ChatScreenState extends State<ChatScreen>{
               }
             ),
           ),
+
+          //animação carregando foto (upload)
+          _isLoading ? LinearProgressIndicator() : Container(),
 
           //aqui vai pegar o TextComposer vai pegar a função de enviar a mensagem/imagem  e enviar para o Firebase
           TextComposer(_sendMessage),

@@ -42,7 +42,6 @@ void main(){
     ),
     home: HomePage(),
   ));
-  Firestore.instance.collection("col").document("doc").setData({"texto":"isac"});
 }
 
 class HomePage extends StatefulWidget {
