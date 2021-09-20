@@ -1,8 +1,12 @@
 //tela do chat
 
+import 'dart:io';
+
 import 'package:chat/chat_composer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+
 
 class ChatScreen extends StatefulWidget {
 
@@ -10,15 +14,32 @@ class ChatScreen extends StatefulWidget {
   _ChatScreenState createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen>{
 
   //função de enviar a mensagem para o firestore
-  void _sendMessage(String text){
+  //colocando entre chaves pois os parâmetros são opicionais
+  void _sendMessage({String text, File imgFile}) async{
+
+    Map<String, dynamic> data = {};
+
+    //enviando um arquivo para o Firebase storage:
+    if(imgFile != null){
+      StorageUploadTask task = FirebaseStorage.instance.ref().child(DateTime.now().microsecondsSinceEpoch.toString()).putFile(imgFile);
+      //retorna as informações da task concluída:
+      StorageTaskSnapshot taskSnapshot = await task.onComplete;
+      String url= await taskSnapshot.ref.getDownloadURL();
+      data["imgUrl"] = url;
+    }
+
+    //enviando o texto (mensagem)  para o Firebase
+    if(text != null){
+      data["text"] = text;
+    }
+
     //seria o mesmo que usar: Firestore.instance.collection("x").document().setData({a : b});
     //Firebase > Coleção(mensagens) > adiciona_documento() > "texto" que recebe "texto digitado"
-    Firestore.instance.collection("messages").add({
-      "text" : text
-    });
+    //aqui vai enviar o que estiver no map data, podendo ser a imagem, mensagem
+    Firestore.instance.collection("messages").add(data);
   }
 
   @override

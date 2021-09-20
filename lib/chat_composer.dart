@@ -1,12 +1,14 @@
 //barra de envio do chat
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class TextComposer extends StatefulWidget {
 
   //função de enviar a mensagem
   TextComposer(this.sendMessage);
-  Function(String) sendMessage;
+  final Function({String text, File imgFile}) sendMessage;
 
   @override
   _TextComposerState createState() => _TextComposerState();
@@ -41,7 +43,17 @@ class _TextComposerState extends State<TextComposer> {
           //ícone da câmera
           IconButton(
             icon: Icon(Icons.photo_camera),
-            onPressed: (){},
+            onPressed: () async{
+              //pegando a imagem da câmera
+              final File imgFile = await ImagePicker.pickImage(source: ImageSource.camera);
+              //se não tirar foto:
+              if (imgFile == null){
+                return;
+              }
+              //enviando a foto
+              widget.sendMessage(imgFile: imgFile);
+
+            },
           ),
 
           //campo de texto
@@ -62,7 +74,7 @@ class _TextComposerState extends State<TextComposer> {
               },
               onSubmitted: (text){
                 //pega a mensagem e e armazena na função para enviar a mensagem
-                widget.sendMessage(text);
+                widget.sendMessage(text : text);
                 _reset();
 
               },
@@ -75,7 +87,7 @@ class _TextComposerState extends State<TextComposer> {
             //aqui vai averiguar se algo foi digitado no textfield, se não o botão não é habilitado
             onPressed: _isComposing ? (){
               //chama a função de enviar mensagem pegando do controlador do textfield
-              widget.sendMessage(_controller.text);
+              widget.sendMessage(text: _controller.text);
               _reset();
             } : null,
           )
