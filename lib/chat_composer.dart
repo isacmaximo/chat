@@ -4,14 +4,30 @@ import 'package:flutter/material.dart';
 
 class TextComposer extends StatefulWidget {
 
+  //função de enviar a mensagem
+  TextComposer(this.sendMessage);
+  Function(String) sendMessage;
+
   @override
   _TextComposerState createState() => _TextComposerState();
 }
 
 class _TextComposerState extends State<TextComposer> {
 
+  //controlador do textfield do campo de mensagem:
+  final TextEditingController _controller = TextEditingController();
+
   //vai indicar se eu estou compondo um texto ou não
   bool _isComposing = false;
+
+  //função que reseta o campo (input) e o botão de enviar
+  void _reset(){
+    //apaga o campo depois de enviar a mensagem
+    _controller.clear();
+    setState(() {
+      _isComposing = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +51,7 @@ class _TextComposerState extends State<TextComposer> {
           //onSubimited é para quando formos enviar a mensagem
           Expanded(
             child: TextField(
+              controller: _controller,
               decoration: InputDecoration.collapsed(hintText: "Enviar uma Mensagem"),
               onChanged: (text){
                 setState(() {
@@ -43,7 +60,12 @@ class _TextComposerState extends State<TextComposer> {
 
                 });
               },
-              onSubmitted: (text){},
+              onSubmitted: (text){
+                //pega a mensagem e e armazena na função para enviar a mensagem
+                widget.sendMessage(text);
+                _reset();
+
+              },
             ),
           ),
 
@@ -51,7 +73,11 @@ class _TextComposerState extends State<TextComposer> {
           IconButton(
             icon: Icon(Icons.send),
             //aqui vai averiguar se algo foi digitado no textfield, se não o botão não é habilitado
-            onPressed: _isComposing ? (){} : null,
+            onPressed: _isComposing ? (){
+              //chama a função de enviar mensagem pegando do controlador do textfield
+              widget.sendMessage(_controller.text);
+              _reset();
+            } : null,
           )
         ],
       ),
